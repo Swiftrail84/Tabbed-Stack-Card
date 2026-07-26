@@ -118,7 +118,7 @@ This should become the project's hero image.
 
 ### Visual Editor
 
-![Visual Editor](screenshots/editor-overview.png)
+<img src="screenshots/VisualEditor.png" alt="Visual Editor" width="600">
 
 Display the complete editor including:
 
