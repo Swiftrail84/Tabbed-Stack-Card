@@ -7,7 +7,7 @@
 
 **Create clean, responsive Home Assistant dashboards with a tab experience that feels native.**
 
-![Dashboard Overview](screenshots/dashboard-overview.png)
+![Dashboard Overview](screenshots/TabbedStackCardOverview.png)
 
 I built Tabbed Stack Card because I wanted a tab component that feels like a natural part of Home Assistant. Rather than adding another feature-rich custom card, the goal was to create an intuitive dashboard component that stays out of the way, adapts to every screen size and lets users focus on their home—not on the interface.
 
