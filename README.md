@@ -1,6 +1,7 @@
 # Tabbed Stack Card
 
-![HACS](https://img.shields.io/badge/HACS-Default-blue)
+<!-- ![HACS](https://img.shields.io/badge/HACS-Default-blue) -->
+![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-blue)
 ![License](https://img.shields.io/github/license/Swiftrail84/tabbed-stack-card)
 ![Version](https://img.shields.io/github/v/release/Swiftrail84/tabbed-stack-card)
