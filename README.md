@@ -15,18 +15,11 @@ I built Tabbed Stack Card because I wanted a tab component that feels like a nat
 
 ## Responsive by Design
 
-![Responsive Navigation](screenshots/responsive-tabs.gif)
-
 Tabbed Stack Card continuously adapts to the available width.
 
-If all tabs fit, they are shown on a single row.
+If all tabs fit, they are shown on a single row. If additional tabs no longer fit, they are automatically moved to the next page, and navigation controls appear only when additional pages are required. On touch devices, pages can also be changed using swipe gestures.
 
-If additional tabs no longer fit, they are automatically moved to the next page. Navigation controls appear only when additional pages are required.
-This keeps the interface clean while ensuring that every tab remains fully visible.
-
-No configuration is required.
-
-The behaviour is completely automatic.
+No configuration is required. The behaviour is completely automatic.
 
 ---
 
@@ -36,9 +29,7 @@ Home Assistant dashboards naturally grow over time.
 
 What often starts as a handful of cards quickly turns into long pages filled with sections, headings and endless scrolling. While tabs are an obvious way to organize content, many implementations become difficult to use once the number of tabs increases or the dashboard is viewed on a phone.
 
-Tabbed Stack Card was created to solve exactly this problem. The result is a navigation experience that scales naturally from just a few tabs to large dashboards with many sections—without sacrificing clarity or usability.
-
-Instead of relying on horizontal scrolling, the card automatically adapts to the available space and keeps navigation intuitive on every screen size. Whether the dashboard is opened on a desktop monitor, a tablet or a smartphone, the user experience remains consistent and predictable.
+Tabbed Stack Card was created to solve exactly this problem, scaling naturally from a few tabs to large dashboards with many sections—without sacrificing clarity or usability, and with a consistent experience across desktop, tablet and smartphone.
 
 The project is intentionally focused on usability rather than feature count.
 
@@ -46,24 +37,23 @@ Every feature exists for one reason:
 
 **to make Home Assistant dashboards easier to build, easier to navigate and easier to maintain.**
 
-
 ---
 
 ## Design Philosophy
 
-Every decision made during the development of this card follows three simple principles.
+Every decision made during the development of this card follows two simple principles.
 
-### 🎨 Visual First
+
+
+#### 🎨 Visual First
 
 Configuration should happen inside Home Assistant whenever possible.
 
-Instead of editing YAML for every little change, the built-in editor exposes nearly every available option through an intuitive graphical interface.
+Instead of editing YAML for every little change, the built-in editor exposes nearly every available option through an intuitive graphical interface. YAML remains available whenever it is needed, but it should never be required for everyday use.
 
-YAML remains available whenever it is needed, but it should never be required for everyday use.
 
----
 
-### 🏠 Native Experience
+#### 🏠 Native Experience
 
 A custom card should not feel like a foreign application inside Home Assistant.
 
@@ -141,9 +131,9 @@ Disabled tabs remain part of the configuration and can easily be re-enabled late
 
 ### Activity Indicators
 
-Display several tabs with different indicator states.
+<img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
-The purpose of the feature should be understandable without reading the accompanying text.
+Display several tabs with different indicator states, so the purpose of the feature is understandable without reading the accompanying text.
 
 ---
 
@@ -190,7 +180,7 @@ Each tab acts as a container for one or multiple Home Assistant cards, allowing 
 
 The card itself does not replace existing Home Assistant cards—it simply organizes them into an intuitive tabbed interface.
 
-Most users will create and configure their tabs directly from the built-in visual editor. YAML remains fully supported for advanced configurations or users who prefer manual editing.
+Most users will create and configure their tabs directly from the built-in visual editor (see below); YAML remains fully supported for advanced configurations or users who prefer manual editing.
 
 ---
 
@@ -250,21 +240,18 @@ tabs:
 
 # Visual Editor
 
-Tabbed Stack Card has been designed around its visual editor.
-Instead of forcing users to edit YAML for every change, nearly every aspect of the card can be configured directly inside Home Assistant. The result is a workflow that feels familiar, fast and fully integrated into the existing dashboard editor while still providing full flexibility whenever manual YAML editing is preferred
-
-The editor follows the same design principles as the card itself:
+Tabbed Stack Card has been designed around its visual editor: nearly every aspect of the card can be configured directly inside Home Assistant, in a workflow that is
 
 - intuitive
 - responsive
 - powerful
 - familiar to Home Assistant users
 
+Full YAML editing remains available whenever manual configuration is preferred.
+
 ---
 
 ## General Appearance
-
-![Appearance](screenshots/editor-general.png)
 
 Customize the overall appearance of the tab bar to match your dashboard.
 
@@ -280,18 +267,15 @@ Available options include:
 
 Changes are applied immediately, making it easy to experiment with different styles.
 
-
 ---
 
 ## Activity Indicators
 
-![Activity Indicators](screenshots/activity-indicators.png)
+<img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
 Activity indicators allow important information to remain visible even when another tab is currently selected.
 
-When supported entities become active, a colored indicator can automatically appear next to the corresponding tab.
-
-Optionally, the tab title and icon can also change color to provide additional visual feedback.
+When supported entities become active, a colored indicator can automatically appear next to the corresponding tab. Optionally, the tab title and icon can also change color to provide additional visual feedback.
 
 Supported domains currently include:
 
@@ -309,27 +293,15 @@ This makes it easy to identify active rooms or devices at a glance without openi
 
 ## Responsive Navigation
 
-Responsive navigation is the defining feature of Tabbed Stack Card.
-
-Instead of shrinking tabs until they become unreadable or introducing horizontal scrolling, the card automatically calculates how many tabs fit into the available width.
-
-Additional tabs are moved onto separate pages automatically.
-
-Navigation controls only appear when they are actually required.
-
-On touch devices, pages can also be changed using swipe gestures, providing a natural mobile experience without requiring any additional configuration.
+Responsive navigation is the defining feature of Tabbed Stack Card (see [Responsive by Design](#responsive-by-design) above): instead of shrinking tabs until they become unreadable or introducing horizontal scrolling, the card automatically calculates how many tabs fit into the available width and moves the rest onto separate pages, with navigation controls appearing only when actually required.
 
 ---
 
 ## Lazy Loading
 
-Large dashboards can contain dozens of cards.
+Large dashboards can contain dozens of cards. Creating every card immediately would increase loading times and consume unnecessary resources.
 
-Creating every card immediately would increase loading times and consume unnecessary resources.
-
-Tabbed Stack Card therefore loads only the currently visible tab during the initial render.
-
-Additional tabs are created automatically when they are opened for the first time and remain available afterwards.
+Tabbed Stack Card therefore loads only the currently visible tab during the initial render. Additional tabs are created automatically when they are opened for the first time and remain available afterwards.
 
 This approach improves dashboard responsiveness while remaining completely transparent to the user.
 
