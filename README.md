@@ -123,7 +123,7 @@ This screenshot should immediately demonstrate that the card offers a powerful g
 
 ### Individual Tab Configuration
 
-![Tab Configuration](screenshots/IndividualTabConfiguration.png)
+<img src="screenshots/IndividualTabConfiguration.png" alt="Individual Tab Configuration" width="600">
 
 Every tab can be configured independently.
 
@@ -279,13 +279,6 @@ Available options include:
 - Transparency
 
 Changes are applied immediately, making it easy to experiment with different styles.
-
----
-
-## Individual Tab Configuration
-
-![Tab Configuration](screenshots/editor-tab.png)
-
 
 
 ---
