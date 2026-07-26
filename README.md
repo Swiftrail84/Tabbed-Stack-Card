@@ -102,7 +102,7 @@ Colors, controls and interaction patterns have been designed to blend naturally 
 
 ### Dashboard Overview
 
-![Dashboard](screenshots/dashboard-overview.png)
+<img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
 A realistic Home Assistant dashboard showing:
 
