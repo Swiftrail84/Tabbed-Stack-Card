@@ -13,6 +13,18 @@ I built Tabbed Stack Card because I wanted a tab component that feels like a nat
 
 ---
 
+## Getting Started
+
+A Tabbed Stack Card consists of one or more **tabs**.
+
+Each tab acts as a container for one or multiple Home Assistant cards, allowing related information to be grouped together while keeping the dashboard compact and easy to navigate.
+
+The card itself does not replace existing Home Assistant cards—it simply organizes them into an intuitive tabbed interface.
+
+Most users will create and configure their tabs directly from the built-in visual editor (see below); YAML remains fully supported for advanced configurations or users who prefer manual editing.
+
+---
+
 ## Responsive by Design
 
 Tabbed Stack Card continuously adapts to the available width.
@@ -34,7 +46,6 @@ Tabbed Stack Card was created to solve exactly this problem, scaling naturally f
 The project is intentionally focused on usability rather than feature count.
 
 Every feature exists for one reason:
-
 **to make Home Assistant dashboards easier to build, easier to navigate and easier to maintain.**
 
 ---
@@ -78,25 +89,23 @@ Colors, controls and interaction patterns have been designed to blend naturally 
 
 ---
 
-## Screenshots
+## Overview
 
-### Dashboard Overview
+### Dashboard
 
 <img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
 A realistic Home Assistant dashboard showing:
 
-- 5–7 tabs
+- Freely configurable number of tabs
 - several different card types
-- one selected tab
-- multiple activity indicators
-- dark mode
-
-This should become the project's hero image.
+- activity indicators
 
 ---
 
 ### Visual Editor
+
+Tabbed Stack Card has been designed around its visual editor: nearly every aspect of the card can be configured directly inside Home Assistant, in a workflow that is intuitive, responsive and familiar to Home Assistant users
 
 <img src="screenshots/VisualEditor.png" alt="Visual Editor" width="600">
 
@@ -106,8 +115,15 @@ Display the complete editor including:
 - Active tab settings
 - Activity indicator settings
 - Multiple configured tabs
+- Font size
+- Minimum tab width
+- Horizontal spacing
+- Text color
+- Active tab color
+- Background color
+- Transparency
 
-This screenshot should immediately demonstrate that the card offers a powerful graphical configuration interface.
+Changes are applied immediately, making it easy to experiment with different styles. Full YAML editing remains available whenever manual configuration is preferred.
 
 ---
 
@@ -121,7 +137,7 @@ Each tab supports:
 
 - Custom title
 - Home Assistant icon picker
-- Enable / disable switch
+- **Enable / disable switch for each tab**
 - Individual card configuration
 - YAML editor
 
@@ -133,7 +149,37 @@ Disabled tabs remain part of the configuration and can easily be re-enabled late
 
 <img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
-Display several tabs with different indicator states, so the purpose of the feature is understandable without reading the accompanying text.
+Activity indicators allow important information to remain visible even when another tab is currently selected.
+
+When supported entities become active, a colored indicator can automatically appear next to the corresponding tab. Optionally, the tab title and icon can also change color to provide additional visual feedback.
+
+Supported domains currently include:
+
+- `light`
+- `switch`
+- `fan`
+- `cover`
+- `climate`
+- `humidifier`
+- `input_boolean`
+
+This makes it easy to identify active rooms or devices at a glance without opening every tab.
+
+---
+
+## Responsive Navigation
+
+Responsive navigation is the defining feature of Tabbed Stack Card (see [Responsive by Design](#responsive-by-design) above): instead of shrinking tabs until they become unreadable or introducing horizontal scrolling, the card automatically calculates how many tabs fit into the available width and moves the rest onto separate pages, with navigation controls appearing only when actually required.
+
+---
+
+## Lazy Loading
+
+Large dashboards can contain dozens of cards. Creating every card immediately would increase loading times and consume unnecessary resources.
+
+Tabbed Stack Card therefore loads only the currently visible tab during the initial render. Additional tabs are created automatically when they are opened for the first time and remain available afterwards.
+
+This approach improves dashboard responsiveness while remaining completely transparent to the user.
 
 ---
 
@@ -171,16 +217,6 @@ type: module
 ```
 
 Restart Home Assistant.
-
-## Getting Started
-
-A Tabbed Stack Card consists of one or more **tabs**.
-
-Each tab acts as a container for one or multiple Home Assistant cards, allowing related information to be grouped together while keeping the dashboard compact and easy to navigate.
-
-The card itself does not replace existing Home Assistant cards—it simply organizes them into an intuitive tabbed interface.
-
-Most users will create and configure their tabs directly from the built-in visual editor (see below); YAML remains fully supported for advanced configurations or users who prefer manual editing.
 
 ---
 
@@ -235,75 +271,6 @@ tabs:
       - type: weather-forecast
         entity: weather.home
 ```
-
----
-
-# Visual Editor
-
-Tabbed Stack Card has been designed around its visual editor: nearly every aspect of the card can be configured directly inside Home Assistant, in a workflow that is
-
-- intuitive
-- responsive
-- powerful
-- familiar to Home Assistant users
-
-Full YAML editing remains available whenever manual configuration is preferred.
-
----
-
-## General Appearance
-
-Customize the overall appearance of the tab bar to match your dashboard.
-
-Available options include:
-
-- Font size
-- Minimum tab width
-- Horizontal spacing
-- Text color
-- Active tab color
-- Background color
-- Transparency
-
-Changes are applied immediately, making it easy to experiment with different styles.
-
----
-
-## Activity Indicators
-
-<img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
-
-Activity indicators allow important information to remain visible even when another tab is currently selected.
-
-When supported entities become active, a colored indicator can automatically appear next to the corresponding tab. Optionally, the tab title and icon can also change color to provide additional visual feedback.
-
-Supported domains currently include:
-
-- `light`
-- `switch`
-- `fan`
-- `cover`
-- `climate`
-- `humidifier`
-- `input_boolean`
-
-This makes it easy to identify active rooms or devices at a glance without opening every tab.
-
----
-
-## Responsive Navigation
-
-Responsive navigation is the defining feature of Tabbed Stack Card (see [Responsive by Design](#responsive-by-design) above): instead of shrinking tabs until they become unreadable or introducing horizontal scrolling, the card automatically calculates how many tabs fit into the available width and moves the rest onto separate pages, with navigation controls appearing only when actually required.
-
----
-
-## Lazy Loading
-
-Large dashboards can contain dozens of cards. Creating every card immediately would increase loading times and consume unnecessary resources.
-
-Tabbed Stack Card therefore loads only the currently visible tab during the initial render. Additional tabs are created automatically when they are opened for the first time and remain available afterwards.
-
-This approach improves dashboard responsiveness while remaining completely transparent to the user.
 
 ---
 
