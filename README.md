@@ -63,16 +63,6 @@ YAML remains available whenever it is needed, but it should never be required fo
 
 ---
 
-### 📱 Mobile First
-
-Many Home Assistant dashboards are primarily used on phones.
-
-Tabbed Stack Card has therefore been designed with touch interaction as a first-class citizen.
-
-Responsive layouts, swipe gestures and adaptive tab paging ensure that the dashboard remains comfortable to use regardless of screen size.
-
----
-
 ### 🏠 Native Experience
 
 A custom card should not feel like a foreign application inside Home Assistant.
@@ -131,32 +121,25 @@ This screenshot should immediately demonstrate that the card offers a powerful g
 
 ---
 
-### Tab Configuration
+### Individual Tab Configuration
 
-![Tab Configuration](screenshots/editor-tab.png)
+![Tab Configuration](screenshots/IndividualTabConfiguration.png)
 
-Display one expanded tab including:
+Every tab can be configured independently.
 
-- Tab name
-- Icon picker
-- Enable/disable switch
+Each tab supports:
+
+- Custom title
+- Home Assistant icon picker
+- Enable / disable switch
+- Individual card configuration
 - YAML editor
 
----
-
-### Mobile Layout
-
-![Mobile](screenshots/mobile-dashboard.png)
-
-Show the same dashboard on a smartphone.
-
-The image should demonstrate that fewer tabs fit on the screen while navigation remains clean and intuitive.
+Disabled tabs remain part of the configuration and can easily be re-enabled later.
 
 ---
 
 ### Activity Indicators
-
-![Activity Indicators](screenshots/activity-indicators.png)
 
 Display several tabs with different indicator states.
 
@@ -303,17 +286,7 @@ Changes are applied immediately, making it easy to experiment with different sty
 
 ![Tab Configuration](screenshots/editor-tab.png)
 
-Every tab can be configured independently.
 
-Each tab supports:
-
-- Custom title
-- Home Assistant icon picker
-- Enable / disable switch
-- Individual card configuration
-- YAML editor
-
-Disabled tabs remain part of the configuration and can easily be re-enabled later.
 
 ---
 
