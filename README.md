@@ -101,6 +101,8 @@ A realistic Home Assistant dashboard showing:
 - several different card types
 - activity indicators
 
+> Please note: Tabbed Stack Card is designed to integrate seamlessly with Home Assistant's native [lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod) styling. Consequently, buttons used inside a Tabbed Stack Card are not automatically outlined with a colored border when turned on.
+
 ---
 
 ### Visual Editor
@@ -186,6 +188,10 @@ This approach improves dashboard responsiveness while remaining completely trans
 ## Installation
 
 ### HACS
+
+[![Open your Home Assistant instance and open the HACS repository dialog with a specific repository pre-filled.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Swiftrail84&repository=tabbed-stack-card&category=plugin)
+
+Install using HACS or [see this guide](https://www.hacs.xyz/docs/use/configuration/basic/#to-set-up-the-hacs-integration).
 
 Search for **Tabbed Stack Card** inside HACS and install the card.
 
