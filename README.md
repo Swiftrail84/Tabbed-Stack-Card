@@ -131,14 +131,6 @@ This screenshot should immediately demonstrate that the card offers a powerful g
 
 ---
 
-### General Appearance
-
-![Appearance](screenshots/editor-general.png)
-
-Focus on the appearance section showing typography, colors, padding and sizing options.
-
----
-
 ### Tab Configuration
 
 ![Tab Configuration](screenshots/editor-tab.png)
