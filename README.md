@@ -1,10 +1,11 @@
 # Tabbed Stack Card
 
-<!-- ![HACS](https://img.shields.io/badge/HACS-Default-blue) -->
-![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)
+![HACS](https://img.shields.io/badge/HACS-Default-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-blue)
-![License](https://img.shields.io/github/license/Swiftrail84/tabbed-stack-card)
 ![Version](https://img.shields.io/github/v/release/Swiftrail84/tabbed-stack-card)
+![License](https://img.shields.io/github/license/Swiftrail84/tabbed-stack-card)
+![Downloads](https://img.shields.io/github/downloads/Swiftrail84/Tabbed-Stack-Card/total)
+
 
 **Create clean, responsive Home Assistant dashboards with a tab experience that feels native.**
 
@@ -94,7 +95,7 @@ Colors, controls and interaction patterns have been designed to blend naturally 
 
 ### Dashboard
 
-<img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
 A realistic Home Assistant dashboard showing:
 
@@ -110,7 +111,7 @@ A realistic Home Assistant dashboard showing:
 
 Tabbed Stack Card has been designed around its visual editor: nearly every aspect of the card can be configured directly inside Home Assistant, in a workflow that is intuitive, responsive and familiar to Home Assistant users
 
-<img src="screenshots/VisualEditor.png" alt="Visual Editor" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/VisualEditor.png" alt="Visual Editor" width="600">
 
 Display the complete editor including:
 
@@ -132,7 +133,7 @@ Changes are applied immediately, making it easy to experiment with different sty
 
 ### Individual Tab Configuration
 
-<img src="screenshots/IndividualTabConfiguration.png" alt="Individual Tab Configuration" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/IndividualTabConfiguration.png" alt="Individual Tab Configuration" width="600">
 
 Every tab can be configured independently.
 
@@ -150,7 +151,7 @@ Disabled tabs remain part of the configuration and can easily be re-enabled late
 
 ### Activity Indicators
 
-<img src="screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
 
 Activity indicators allow important information to remain visible even when another tab is currently selected.
 
@@ -288,6 +289,8 @@ Developing a polished Home Assistant custom card requires countless hours of des
 This project also benefited from extensive AI-assisted development using **ChatGPT** and **Claude**, which provided valuable support during brainstorming, debugging and implementation.
 
 Every feature, design decision and final implementation has been reviewed and adapted manually.
+
+**Thanks to [Tabbed Card](https://github.com/kinghat/tabbed-card) for the inspiration! And finally, in the words of [kinghat](https://github.com/kinghat): a huge thank you to [Home Assistant](https://www.home-assistant.io/) and [HACS](https://hacs.xyz/) for providing such an incredible platform and ecosystem for the community.**
 
 ---
 
