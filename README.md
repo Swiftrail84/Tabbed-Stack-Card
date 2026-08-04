@@ -1,15 +1,18 @@
 # Tabbed Stack Card
 
-![HACS](https://img.shields.io/badge/HACS-Default-blue)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-blue)
+
 ![Version](https://img.shields.io/github/v/release/Swiftrail84/tabbed-stack-card)
-![License](https://img.shields.io/github/license/Swiftrail84/tabbed-stack-card)
 ![Downloads](https://img.shields.io/github/downloads/Swiftrail84/Tabbed-Stack-Card/total)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-blue)
+![HACS](https://img.shields.io/badge/HACS-Default-blue)
+![License](https://img.shields.io/github/license/Swiftrail84/tabbed-stack-card)
 
 
 **Create clean, responsive Home Assistant dashboards with a tab experience that feels native.**
 
 ![Dashboard Overview](screenshots/TabbedStackCardOverview.png)
+
+[![Open your Home Assistant instance and open the HACS repository dialog with this repository pre-filled.](https://my.home-assistant.io/badges/hacs_repository.svg)](...)
 
 I built Tabbed Stack Card because I wanted a tab component that feels like a natural part of Home Assistant. Rather than adding another feature-rich custom card, the goal was to create an intuitive dashboard component that stays out of the way, adapts to every screen size and lets users focus on their home—not on the interface.
 
@@ -17,7 +20,7 @@ I built Tabbed Stack Card because I wanted a tab component that feels like a nat
 
 ## Getting Started
 
-A Tabbed Stack Card consists of one or more **tabs**.
+A Tabbed Stack Card consists of one or more **tabs** and organizes Home Assistant cards into responsive tabs, making large dashboards easier to navigate without creating additional dashboard views.
 
 Each tab acts as a container for one or multiple Home Assistant cards, allowing related information to be grouped together while keeping the dashboard compact and easy to navigate.
 
@@ -49,6 +52,18 @@ The project is intentionally focused on usability rather than feature count.
 
 Every feature exists for one reason:
 **to make Home Assistant dashboards easier to build, easier to navigate and easier to maintain.**
+
+---
+
+## Built for Everyday Dashboards
+
+Tabbed Stack Card was developed while building real Home Assistant dashboards used every day.
+
+Many of its features—including responsive tab paging, lazy loading and the visual editor—originated from practical requirements rather than technical experiments.
+
+The goal has always been simple:
+
+Create a tab component that quietly disappears into the dashboard, allowing users to focus on their home instead of the interface.
 
 ---
 
@@ -91,13 +106,13 @@ Colors, controls and interaction patterns have been designed to blend naturally 
 
 ---
 
-## Overview
+## Showcase
 
-### Dashboard
+### Dashboard Experience
 
-<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/DashboardOverview.png" alt="Dashboard Overview" width="750">
 
-A realistic Home Assistant dashboard showing:
+The dashboard below demonstrates how Tabbed Stack Card keeps large Lovelace dashboards clean and easy to navigate.
 
 - Freely configurable number of tabs
 - several different card types
@@ -109,11 +124,9 @@ A realistic Home Assistant dashboard showing:
 
 ### Visual Editor
 
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/VisualEditor.png" alt="Visual Editor" width="750">
+
 Tabbed Stack Card has been designed around its visual editor: nearly every aspect of the card can be configured directly inside Home Assistant, in a workflow that is intuitive, responsive and familiar to Home Assistant users
-
-<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/VisualEditor.png" alt="Visual Editor" width="600">
-
-Display the complete editor including:
 
 - General appearance settings
 - Active tab settings
@@ -133,7 +146,7 @@ Changes are applied immediately, making it easy to experiment with different sty
 
 ### Individual Tab Configuration
 
-<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/IndividualTabConfiguration.png" alt="Individual Tab Configuration" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/IndividualTabConfiguration.png" alt="Individual Tab Configuration" width="750">
 
 Every tab can be configured independently.
 
@@ -151,7 +164,7 @@ Disabled tabs remain part of the configuration and can easily be re-enabled late
 
 ### Activity Indicators
 
-<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/DashboardOverview.png" alt="Dashboard Overview" width="600">
+<img src="https://raw.githubusercontent.com/Swiftrail84/Tabbed-Stack-Card/main/screenshots/DashboardOverview.png" alt="Dashboard Overview" width="750">
 
 Activity indicators allow important information to remain visible even when another tab is currently selected.
 
@@ -168,12 +181,6 @@ Supported domains currently include:
 - `input_boolean`
 
 This makes it easy to identify active rooms or devices at a glance without opening every tab.
-
----
-
-## Responsive Navigation
-
-Responsive navigation is the defining feature of Tabbed Stack Card (see [Responsive by Design](#responsive-by-design) above): instead of shrinking tabs until they become unreadable or introducing horizontal scrolling, the card automatically calculates how many tabs fit into the available width and moves the rest onto separate pages, with navigation controls appearing only when actually required.
 
 ---
 
@@ -296,11 +303,12 @@ Every feature, design decision and final implementation has been reviewed and ad
 
 ## Compatibility
 
-- Home Assistant 2025.1+
 - Lovelace Dashboards
 - HACS
-- Manual installation supported
+- Automatic & Manual installation supported
 - No external dependencies
+- Fully responsive
+- Fully configurable through the visual editor
 
 ---
 
