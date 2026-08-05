@@ -2,17 +2,16 @@
 
 
 ![Version](https://img.shields.io/github/v/release/Swiftrail84/tabbed-stack-card)
-![Downloads](https://img.shields.io/github/downloads/Swiftrail84/Tabbed-Stack-Card/total)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-blue)
 ![HACS](https://img.shields.io/badge/HACS-Default-blue)
 ![License](https://img.shields.io/github/license/Swiftrail84/tabbed-stack-card)
-
+![GitHub Repo stars](https://img.shields.io/github/stars/Swiftrail84/Tabbed-Stack-Card)
+![GitHub Issues](https://img.shields.io/github/issues/Swiftrail84/Tabbed-Stack-Card)
 
 **Create clean, responsive Home Assistant dashboards with a tab experience that feels native.**
 
 ![Dashboard Overview](screenshots/TabbedStackCardOverview.png)
 
-[![Open your Home Assistant instance and open the HACS repository dialog with this repository pre-filled.](https://my.home-assistant.io/badges/hacs_repository.svg)](...)
+[![Open your Home Assistant instance and open the HACS repository dialog with a specific repository pre-filled.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Swiftrail84&repository=tabbed-stack-card&category=plugin)
 
 I built Tabbed Stack Card because I wanted a tab component that feels like a natural part of Home Assistant. Rather than adding another feature-rich custom card, the goal was to create an intuitive dashboard component that stays out of the way, adapts to every screen size and lets users focus on their home—not on the interface.
 
@@ -118,7 +117,7 @@ The dashboard below demonstrates how Tabbed Stack Card keeps large Lovelace dash
 - several different card types
 - activity indicators
 
-> Please note: Tabbed Stack Card is designed to integrate seamlessly with Home Assistant's native [lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod) styling. Consequently, buttons used inside a Tabbed Stack Card are not automatically outlined with a colored border when turned on.
+> Please note: Tabbed Stack Card does not apply any styling to the cards placed inside it. Buttons, entities and other nested cards keep their normal Home Assistant appearance — for example, a button is not automatically outlined with a colored border when its entity is on. If you'd like that behaviour, style it yourself using the fantastic [lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod) from [Thomas Lovén](https://github.com/thomasloven).
 
 ---
 
@@ -285,6 +284,59 @@ tabs:
 
       - type: weather-forecast
         entity: weather.home
+```
+
+---
+
+## Configuration Reference
+
+### Card-level options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `tabs` | list | *(required)* | List of tabs, see below |
+| `tab_font_size` | number (px) | `13` | Font size of tab labels |
+| `tab_min_width` | number (px) | `72` | Minimum width of a tab |
+| `tab_padding_h` | number (px) | `10` | Horizontal padding inside a tab |
+| `tab_base_text_color` | color | theme text color | Text color of non-selected tabs |
+| `tab_bg_color` | color / `transparent` | translucent accent color | Background of the **active** tab |
+| `tab_text_color` | color | theme text color | Text color of the **active** tab |
+| `tab_indicator_color` | color | `#00ffff` | Color of the activity-indicator dot |
+| `tint_active_text` | boolean | `false` | Also tint a tab's label/icon when it contains an active device |
+| `show_indicators` | boolean | `true` | Show/hide the activity-indicator dot globally |
+| `remember_tab` | boolean | `false` | Remember the last selected tab (stored locally in the browser) and reopen it automatically |
+
+### Per tab
+
+| Option | Type | Description |
+|---|---|---|
+| `label` | string | Display name (optional) |
+| `icon` | string | MDI icon, e.g. `mdi:home` (optional) |
+| `enabled` | boolean | Whether the tab appears in the bar (default `true`) |
+| `visibility` | object | Optional condition to automatically show/hide this tab, see below |
+| `cards` | list | Any Home Assistant cards for this tab |
+
+### Tab visibility conditions (`visibility`)
+
+Lets a tab appear or disappear automatically instead of toggling `enabled` by hand.
+
+| `condition` | Additional fields | Behaviour |
+|---|---|---|
+| `state` | `entity`, `state` | Visible only while `entity` is in state `state` |
+| `numeric_state` | `entity`, `above`, `below` | Visible only while `entity`'s numeric state is above/below the given values (either or both) |
+| `time` | `after`, `before` (`HH:MM`) | Visible only within the given time window (wraps past midnight if `after` > `before`) |
+
+```yaml
+tabs:
+  - label: XMAS
+    icon: mdi:pine-tree
+    visibility:
+      condition: state
+      entity: input_boolean.christmas_mode
+      state: "on"
+    cards:
+      - type: button
+        entity: switch.christmas_lights
 ```
 
 ---
