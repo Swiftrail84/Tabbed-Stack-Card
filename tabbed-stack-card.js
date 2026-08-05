@@ -1,5 +1,5 @@
 // Tabbed Stack Card für Home Assistant
-// v1.0.0
+// v1.1.0
 (() => {
   const CARD_TAG = 'tabbed-stack-card';
   const EDITOR_TAG = 'tabbed-stack-card-editor';
@@ -58,7 +58,40 @@
       if (!this._config) return [];
       return this._config.tabs
         .map((t, i) => i)
-        .filter((i) => this._config.tabs[i].enabled !== false);
+        .filter((i) => this._config.tabs[i].enabled !== false && this._isTabVisible(this._config.tabs[i]));
+    }
+
+    // Schlüssel je Dashboard-Seite + Tab-Namen dieser konkreten Karte, damit
+    // mehrere tabbed-stack-cards auf unterschiedlichen Dashboards (oder
+    // mehrere Instanzen auf derselben Seite mit unterschiedlichen Tabs) sich
+    // nicht gegenseitig überschreiben.
+    _storageKey() {
+      const path = typeof location !== 'undefined' ? location.pathname : '';
+      const names = (this._config.tabs || []).map((t) => t.label || '').join('|');
+      return `tabbed-stack-card:${path}:${names}`;
+    }
+
+    _loadRememberedTab() {
+      try {
+        const raw = window.localStorage.getItem(this._storageKey());
+        if (raw === null) return null;
+        const idx = Number(raw);
+        return Number.isInteger(idx) ? idx : null;
+      } catch (err) {
+        // localStorage kann in seltenen Fällen blockiert sein (z.B. manche
+        // eingebetteten/privaten Browser-Kontexte) - dann einfach ignorieren,
+        // die Karte funktioniert weiterhin normal, nur ohne Erinnerung.
+        return null;
+      }
+    }
+
+    _rememberActiveTab(index) {
+      if (!this._config || !this._config.remember_tab) return;
+      try {
+        window.localStorage.setItem(this._storageKey(), String(index));
+      } catch (err) {
+        // Siehe _loadRememberedTab() - Fehler beim Schreiben ignorieren.
+      }
     }
 
     setConfig(config) {
@@ -67,9 +100,16 @@
           'tabbed-stack-card: "tabs" muss ein Array mit mindestens einem Eintrag sein.'
         );
       }
+      const isFirstConfig = this._config === undefined;
       this._config = config;
       if (!this.shadowRoot) {
         this.attachShadow({ mode: 'open' });
+      }
+      if (isFirstConfig && config.remember_tab) {
+        const remembered = this._loadRememberedTab();
+        if (remembered !== null) {
+          this._activeIndex = remembered;
+        }
       }
       const visible = this._visibleIndices();
       if (visible.length === 0) {
@@ -104,12 +144,34 @@
       // nicht abgefangene Ausnahme werfen, die bei jeder Zustandsänderung für
       // jede Karte erneut ausgelöst wird.
       if (!this._config || !this._tabBodies) return;
+
+      // Sichtbarkeitsbedingungen können sich mit jedem hass-Update ändern
+      // (z.B. eine Uhrzeit- oder Sensor-Bedingung). Ein voller Neuaufbau bei
+      // JEDER Zustandsänderung wäre aber unnötig teuer - deshalb nur dann neu
+      // rendern, wenn sich die tatsächlich sichtbare Tab-Menge dadurch wirklich
+      // verändert hat.
+      if (this._hasVisibilityConditions()) {
+        const visible = this._visibleIndices();
+        const key = visible.join(',');
+        if (key !== this._lastVisibleKey) {
+          this._lastVisibleKey = key;
+          this._updateVisibility(visible);
+          return;
+        }
+      }
+
       this._tabBodies.forEach(({ wrapper }) => {
         wrapper.querySelectorAll(':scope > .tsc-card').forEach((el) => {
           el.hass = hass;
         });
       });
       this._updateTabHighlights();
+    }
+
+    _hasVisibilityConditions() {
+      return (this._config.tabs || []).some(
+        (t) => t.visibility && t.visibility.condition && t.visibility.condition !== 'none'
+      );
     }
 
     getCardSize() {
@@ -127,8 +189,11 @@
 
       const style = document.createElement('style');
       style.textContent = `
+        /* ============ Grundgerüst ============ */
         :host { display: block; }
         ha-card { overflow: hidden; display: flex; flex-direction: column; }
+
+        /* ============ Tab-Leiste: Rahmen ============ */
         .tsc-tabbar-wrapper {
           display: flex;
           align-items: stretch;
@@ -145,6 +210,8 @@
           min-width: 0;
           touch-action: pan-y;
         }
+
+        /* ============ Tab-Leiste: Navigationspfeile ============ */
         .tsc-tabbar-nav {
           flex: 0 0 auto;
           display: none;
@@ -165,16 +232,18 @@
         }
         .tsc-tabbar-nav.visible { display: flex; }
         .tsc-tabbar-nav:hover {
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
+          background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.08);
           color: var(--primary-color, #03a9f4);
         }
         .tsc-tabbar-nav:active {
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.14);
+          background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.14);
         }
         .tsc-tabbar-nav ha-icon {
           --mdc-icon-size: 20px;
           pointer-events: none;
         }
+
+        /* ============ Einzelner Tab: Grundzustand ============ */
         .tsc-tab {
           flex: 0 0 auto;
           display: flex;
@@ -200,6 +269,37 @@
         .tsc-tab.tsc-tab-hidden {
           display: none;
         }
+
+        /* ============ Einzelner Tab: Hover/Klick, NICHT ausgewählt ============
+           WICHTIG: Diese beiden Regeln müssen vor ".tsc-tab.active" stehen!
+           Beide setzen "background" mit derselben CSS-Priorität wie
+           ".tsc-tab.active" - bei einem Gleichstand gewinnt die Regel, die
+           weiter unten im Code steht. Stünden diese hier danach, würde ein
+           bereits ausgewählter Tab beim Hovern/Klicken seine eigene Farbe
+           verlieren und stattdessen diese neutrale Hover-Farbe zeigen. */
+        .tsc-tab:hover {
+          background: rgba(var(--rgb-primary-text-color, 128, 128, 128), 0.06);
+        }
+        .tsc-tab:active {
+          background: rgba(var(--rgb-primary-text-color, 128, 128, 128), 0.1);
+        }
+
+        /* ============ Einzelner Tab: ausgewählter ("aktiver") Tab ============ */
+        .tsc-tab.active {
+          background: var(--tsc-tab-bg-color, rgba(var(--rgb-primary-color, 3, 169, 244), 0.18));
+          color: var(--tsc-tab-text-color, var(--primary-text-color, #ffffff));
+        }
+        .tsc-tab.active:hover {
+          filter: brightness(1.15);
+        }
+        .tsc-tab.active:active {
+          filter: brightness(1.25);
+        }
+        .tsc-tab.active ha-icon {
+          color: var(--tsc-tab-text-color, var(--primary-text-color, #ffffff));
+        }
+
+        /* ============ Aktiv-Indikator (Punkt bei eingeschaltetem Gerät) ============ */
         .tsc-indicator {
           display: inline-block;
           margin-left: 6px;
@@ -220,27 +320,25 @@
         .tsc-tabbar.tsc-indicators-disabled .tsc-indicator {
           display: none;
         }
-        /* Name/Icon werden nur dann in der Indikatorfarbe eingefärbt, wenn der
-           Nutzer das explizit über "Name/Icon einfärben" aktiviert hat (Klasse
-           tsc-tint-active auf der Tabbar). Standardmäßig bleibt die Schrift in
-           der "Allgemeinen Textfarbe", nur der kleine Punkt reagiert. */
+
+        /* ============ Optionale Einfärbung von Name/Icon bei aktivem Gerät ============
+           Nur wenn "Name/Icon einfärben" (Klasse tsc-tint-active) aktiv ist -
+           unabhängig vom Punkt selbst. Standardmäßig bleibt die Schrift in der
+           "Allgemeinen Textfarbe". */
         .tsc-tabbar.tsc-tint-active .tsc-tab.has-active {
           color: var(--tsc-tab-indicator-color, #00ffff);
-        }
-        .tsc-tab.active {
-          background: var(--tsc-tab-bg-color, rgba(var(--rgb-primary-color, 3, 169, 244), 0.18));
-          color: var(--tsc-tab-text-color, var(--primary-text-color, #ffffff));
-        }
-        .tsc-tab.active.has-active {
-          background: var(--tsc-tab-bg-color, rgba(var(--rgb-primary-color, 3, 169, 244), 0.18));
-          color: var(--tsc-tab-text-color, var(--primary-text-color, #ffffff));
         }
         .tsc-tabbar.tsc-tint-active .tsc-tab.has-active ha-icon {
           color: var(--tsc-tab-indicator-color, #00ffff);
         }
-        .tsc-tab.active ha-icon {
+
+        /* ============ Kombination: ausgewählter Tab UND aktives Gerät ============ */
+        .tsc-tab.active.has-active {
+          background: var(--tsc-tab-bg-color, rgba(var(--rgb-primary-color, 3, 169, 244), 0.18));
           color: var(--tsc-tab-text-color, var(--primary-text-color, #ffffff));
         }
+
+        /* ============ Karteninhalt ============ */
         .tsc-content {
           overflow-y: auto;
           overflow-x: hidden;
@@ -279,6 +377,7 @@
 
         const tabbar = document.createElement('div');
         tabbar.className = 'tsc-tabbar';
+        tabbar.setAttribute('role', 'tablist');
         if (this._config.tab_font_size) {
           tabbar.style.setProperty('--tsc-tab-font-size', `${this._config.tab_font_size}px`);
         }
@@ -308,27 +407,7 @@
         }
 
         visible.forEach((i) => {
-          const tab = this._config.tabs[i];
-          const btn = document.createElement('button');
-          btn.className = 'tsc-tab' + (i === this._activeIndex ? ' active' : '');
-          btn.dataset.tabIndex = String(i);
-          const hasName = tab.label && tab.label.trim();
-          if (tab.icon) {
-            const icon = document.createElement('ha-icon');
-            icon.setAttribute('icon', tab.icon);
-            btn.appendChild(icon);
-          }
-          if (hasName || !tab.icon) {
-            const span = document.createElement('span');
-            span.textContent = hasName ? tab.label : `Tab ${i + 1}`;
-            btn.appendChild(span);
-          }
-          const indicator = document.createElement('span');
-          indicator.className = 'tsc-indicator';
-          indicator.textContent = '●';
-          btn.appendChild(indicator);
-          btn.addEventListener('click', () => this._selectTab(i));
-          tabbar.appendChild(btn);
+          tabbar.appendChild(this._createTabButton(i));
         });
 
         const nextNav = document.createElement('button');
@@ -375,6 +454,85 @@
       this._updateTabHighlights();
     }
 
+    _createTabButton(i) {
+      const tab = this._config.tabs[i];
+      const btn = document.createElement('button');
+      btn.className = 'tsc-tab' + (i === this._activeIndex ? ' active' : '');
+      btn.dataset.tabIndex = String(i);
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', i === this._activeIndex ? 'true' : 'false');
+      btn.id = `tsc-tab-${i}`;
+      btn.setAttribute('aria-controls', `tsc-panel-${i}`);
+      const hasName = tab.label && tab.label.trim();
+      if (tab.icon) {
+        const icon = document.createElement('ha-icon');
+        icon.setAttribute('icon', tab.icon);
+        btn.appendChild(icon);
+      }
+      if (hasName || !tab.icon) {
+        const span = document.createElement('span');
+        span.textContent = hasName ? tab.label : `Tab ${i + 1}`;
+        btn.appendChild(span);
+      }
+      const indicator = document.createElement('span');
+      indicator.className = 'tsc-indicator';
+      indicator.textContent = '●';
+      btn.appendChild(indicator);
+      btn.addEventListener('click', () => this._selectTab(i));
+      return btn;
+    }
+
+    // Reagiert auf eine veränderte sichtbare Tab-Menge (durch
+    // Sichtbarkeitsbedingungen), OHNE wie _render() alles neu aufzubauen -
+    // bereits geöffnete, längst geladene Tab-Inhalte bleiben dabei erhalten
+    // (Lazy Loading soll durch Sichtbarkeitsbedingungen nicht ausgehebelt
+    // werden). Nur bei einem strukturellen Wechsel zwischen "Leiste vorhanden"
+    // und "keine Leiste nötig" (0-1 vs. mehrere sichtbare Tabs) greifen wir
+    // sicherheitshalber auf den vollen _render()-Aufbau zurück, da das den
+    // grundsätzlichen Kartenaufbau betrifft, nicht nur die Tab-Leiste selbst.
+    _updateVisibility(newVisible) {
+      const hadBar = !!this._tabbarEl;
+      const needsBar = newVisible.length > 1;
+      if (hadBar !== needsBar) {
+        if (newVisible.length > 0 && !newVisible.includes(this._activeIndex)) {
+          this._activeIndex = newVisible[0];
+        }
+        this._render();
+        return;
+      }
+
+      // Nicht mehr sichtbare Tab-Inhalte aus dem DOM und der Merkliste
+      // entfernen, damit sie nicht unnötig im Speicher bleiben.
+      const keep = new Set(newVisible);
+      this._tabBodies.forEach(({ wrapper }, i) => {
+        if (!keep.has(i)) {
+          wrapper.remove();
+          this._tabBodies.delete(i);
+        }
+      });
+
+      this._visibleTabIndices = newVisible;
+
+      if (needsBar && this._tabbarEl) {
+        this._tabbarEl.innerHTML = '';
+        newVisible.forEach((i) => {
+          this._tabbarEl.appendChild(this._createTabButton(i));
+        });
+      }
+
+      if (newVisible.length > 0 && !newVisible.includes(this._activeIndex)) {
+        this._activeIndex = newVisible[0];
+      }
+
+      this._buildTabPanel(this._activeIndex);
+      this._showTabPanel(this._activeIndex);
+
+      if (needsBar) {
+        requestAnimationFrame(() => this._recomputeTabbarPages());
+      }
+      this._updateTabHighlights();
+    }
+
     _isEntityActive(stateObj) {
       if (!stateObj) return false;
 
@@ -387,6 +545,53 @@
 
         default:
           return stateObj.state === 'on';
+      }
+    }
+
+    // Prüft die (optionale) Sichtbarkeitsbedingung eines einzelnen Tabs.
+    // Ohne "visibility"-Eintrag ist ein Tab immer sichtbar (Standardverhalten
+    // wie bisher). Eine unbekannte/fehlerhafte Bedingung blendet den Tab
+    // sicherheitshalber aus, statt ihn fälschlich anzuzeigen.
+    _isTabVisible(tab) {
+      const v = tab && tab.visibility;
+      if (!v || !v.condition || v.condition === 'none') return true;
+      if (!this._hass) return true; // vor dem ersten hass-Update nichts ausblenden
+
+      switch (v.condition) {
+        case 'state': {
+          const stateObj = this._hass.states?.[v.entity];
+          if (!stateObj) return false;
+          return stateObj.state === v.state;
+        }
+        case 'numeric_state': {
+          const stateObj = this._hass.states?.[v.entity];
+          if (!stateObj) return false;
+          const num = Number(stateObj.state);
+          if (Number.isNaN(num)) return false;
+          if (v.above !== undefined && v.above !== null && v.above !== '' && num <= Number(v.above)) return false;
+          if (v.below !== undefined && v.below !== null && v.below !== '' && num >= Number(v.below)) return false;
+          return true;
+        }
+        case 'time': {
+          const toMinutes = (t) => {
+            const m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+            return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+          };
+          const after = toMinutes(v.after);
+          const before = toMinutes(v.before);
+          if (after === null && before === null) return true;
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          if (after !== null && before !== null) {
+            return after <= before
+              ? nowMin >= after && nowMin < before
+              : nowMin >= after || nowMin < before;
+          }
+          if (after !== null) return nowMin >= after;
+          return nowMin < before;
+        }
+        default:
+          return false;
       }
     }
 
@@ -423,10 +628,13 @@
         }
       }
       this.shadowRoot.querySelectorAll('.tsc-tab').forEach((el) => {
-        el.classList.toggle('active', Number(el.dataset.tabIndex) === index);
+        const isActive = Number(el.dataset.tabIndex) === index;
+        el.classList.toggle('active', isActive);
+        el.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
       this._buildTabPanel(index);
       this._showTabPanel(index);
+      this._rememberActiveTab(index);
     }
 
     _showTabPanel(index) {
@@ -555,7 +763,7 @@
         const point = e.touches ? e.touches[0] : e;
         const dx = point.clientX - startX;
         const dy = point.clientY - startY;
-        if (!isSwipe && Math.abs(dx) > directionThreshold && Math.abs(dx) > Math.abs(dy)) {
+        if (!isSwipe && Math.abs(dx) > directionThreshold && Math.abs(dx) > Math.abs(dy) * 1.5) {
           isSwipe = true;
         }
         if (isSwipe && e.cancelable) {
@@ -620,6 +828,9 @@
       const panel = document.createElement('div');
       panel.className = 'tsc-tabpanel';
       panel.dataset.index = String(index);
+      panel.setAttribute('role', 'tabpanel');
+      panel.id = `tsc-panel-${index}`;
+      panel.setAttribute('aria-labelledby', `tsc-tab-${index}`);
       this._contentEl.appendChild(panel);
       this._tabBodies.set(index, { wrapper: panel });
 
@@ -714,15 +925,479 @@
       return wrap;
     }
 
+    // Wählt zur Laufzeit den besten verfügbaren Editor für eine einzelne
+    // Karte, mit Absicherung nach unten: das interne, nicht-offizielle
+    // hui-card-element-editor bietet die komfortabelste Oberfläche, ist aber
+    // nicht garantiert stabil zwischen HA-Versionen. Existiert es nicht (mehr),
+    // fällt die Karte automatisch auf ha-yaml-editor zurück, und als letzte
+    // Stufe auf ein einfaches Textfeld - nie ein kompletter Ausfall.
+    _pickCardElementEditorTag() {
+      if (typeof customElements === 'undefined') return null;
+      if (customElements.get('hui-card-element-editor')) return 'hui-card-element-editor';
+      if (customElements.get('ha-yaml-editor')) return 'ha-yaml-editor';
+      return null;
+    }
+
+    _buildVisibilitySection(index, tab) {
+      const wrap = document.createElement('div');
+      wrap.className = 'settings-grid';
+
+      const v = tab.visibility || {};
+      const currentCondition = v.condition || 'none';
+
+      const typeField = document.createElement('div');
+      typeField.className = 'setting-field';
+      const typeLabel = document.createElement('label');
+      typeLabel.textContent = 'Sichtbarkeit';
+      typeLabel.appendChild(
+        this._createInfoTooltip(
+          'Blendet diesen Tab automatisch ein/aus, statt ihn manuell über "Tab aktiviert" umzuschalten - z.B. nur wenn ein Helfer aktiv ist, ein Sensorwert in einem Bereich liegt, oder nur zu bestimmten Uhrzeiten.',
+          'left'
+        )
+      );
+      const typeSelect = document.createElement('select');
+      [
+        ['none', 'Immer sichtbar'],
+        ['state', 'Nach Zustand einer Entität'],
+        ['numeric_state', 'Nach Zahlenwert einer Entität'],
+        ['time', 'Nach Uhrzeit'],
+      ].forEach(([value, label]) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        if (value === currentCondition) opt.selected = true;
+        typeSelect.appendChild(opt);
+      });
+      typeField.appendChild(typeLabel);
+      typeField.appendChild(typeSelect);
+      wrap.appendChild(typeField);
+
+      const fieldsWrap = document.createElement('div');
+      fieldsWrap.className = 'setting-field visibility-fields';
+      wrap.appendChild(fieldsWrap);
+
+      const writeVisibility = (partial) => {
+        if (partial === null) {
+          delete this._config.tabs[index].visibility;
+        } else {
+          this._config.tabs[index].visibility = { ...this._config.tabs[index].visibility, ...partial };
+        }
+        this._emitChange();
+      };
+
+      const renderFields = (condition) => {
+        fieldsWrap.innerHTML = '';
+        if (condition === 'none') return;
+
+        const makeTextRow = (labelText, key, placeholder) => {
+          const row = document.createElement('div');
+          row.className = 'card-assistant-row';
+          const label = document.createElement('span');
+          label.className = 'header-field-caption visibility-label';
+          label.textContent = labelText;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.placeholder = placeholder || '';
+          input.value = v[key] || '';
+          input.addEventListener('input', () => writeVisibility({ [key]: input.value }));
+          row.appendChild(label);
+          row.appendChild(input);
+          fieldsWrap.appendChild(row);
+        };
+
+        const makeNumberRow = (labelText, key) => {
+          const row = document.createElement('div');
+          row.className = 'card-assistant-row';
+          const label = document.createElement('span');
+          label.className = 'header-field-caption visibility-label';
+          label.textContent = labelText;
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.value = v[key] ?? '';
+          input.addEventListener('input', () => writeVisibility({ [key]: input.value === '' ? undefined : Number(input.value) }));
+          row.appendChild(label);
+          row.appendChild(input);
+          fieldsWrap.appendChild(row);
+        };
+
+        const makeTimeRow = (labelText, key) => {
+          const row = document.createElement('div');
+          row.className = 'card-assistant-row';
+          const label = document.createElement('span');
+          label.className = 'header-field-caption visibility-label';
+          label.textContent = labelText;
+          const input = document.createElement('input');
+          input.type = 'time';
+          input.value = v[key] || '';
+          input.addEventListener('input', () => writeVisibility({ [key]: input.value }));
+          row.appendChild(label);
+          row.appendChild(input);
+          fieldsWrap.appendChild(row);
+        };
+
+        if (condition === 'state') {
+          makeTextRow('Entity-ID', 'entity', 'z.B. input_boolean.weihnachtsmodus');
+          makeTextRow('Gewünschter Zustand', 'state', 'z.B. on');
+        } else if (condition === 'numeric_state') {
+          makeTextRow('Entity-ID', 'entity', 'z.B. sensor.aussentemperatur');
+          makeNumberRow('Größer als', 'above');
+          makeNumberRow('Kleiner als', 'below');
+        } else if (condition === 'time') {
+          makeTimeRow('Ab', 'after');
+          makeTimeRow('Bis', 'before');
+        }
+      };
+
+      typeSelect.addEventListener('change', () => {
+        const condition = typeSelect.value;
+        if (condition === 'none') {
+          writeVisibility(null);
+        } else {
+          writeVisibility({ condition });
+        }
+        renderFields(condition);
+      });
+
+      renderFields(currentCondition);
+
+      return wrap;
+    }
+
+    _buildCardAssistant(index) {
+      const container = document.createElement('div');
+      container.className = 'card-assistant';
+      const isOpen = this._assistantOpen.has(index);
+
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'card-assistant-toggle';
+      const toggleIcon = document.createElement('ha-icon');
+      toggleIcon.setAttribute('icon', isOpen ? 'mdi:chevron-up' : 'mdi:plus-circle-outline');
+      const toggleLabel = document.createElement('span');
+      toggleLabel.textContent = isOpen
+        ? 'Assistent schließen'
+        : 'Karte per Assistent hinzufügen';
+      toggleBtn.appendChild(toggleIcon);
+      toggleBtn.appendChild(toggleLabel);
+      toggleBtn.addEventListener('click', () => {
+        if (this._assistantOpen.has(index)) {
+          this._assistantOpen.delete(index);
+          this._assistantDraft.delete(index);
+        } else {
+          this._assistantOpen.add(index);
+        }
+        this._render();
+      });
+      container.appendChild(toggleBtn);
+
+      if (!isOpen) return container;
+
+      const draft = this._assistantDraft.get(index) || { type: null, config: null };
+      this._assistantDraft.set(index, draft);
+
+      if (!draft.type) {
+        // Schritt 1: Kartentyp wählen.
+        const row = document.createElement('div');
+        row.className = 'card-assistant-row';
+
+        const select = document.createElement('select');
+        const commonTypes = [
+          'button', 'entities', 'entity', 'glance', 'gauge', 'light',
+          'thermostat', 'humidifier', 'media-control', 'picture',
+          'picture-entity', 'picture-glance', 'sensor', 'weather-forecast',
+          'markdown', 'history-graph', 'statistics-graph', 'map',
+          'alarm-panel', 'area', 'tile', 'grid', 'horizontal-stack',
+          'vertical-stack', 'conditional',
+        ];
+        commonTypes.forEach((t) => {
+          const opt = document.createElement('option');
+          opt.value = t;
+          opt.textContent = t;
+          select.appendChild(opt);
+        });
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = 'Eigener Typ …';
+        select.appendChild(customOpt);
+
+        const customInput = document.createElement('input');
+        customInput.type = 'text';
+        customInput.placeholder = 'z.B. custom:button-card';
+        customInput.style.display = 'none';
+
+        select.addEventListener('change', () => {
+          customInput.style.display = select.value === '__custom__' ? 'block' : 'none';
+        });
+
+        row.appendChild(select);
+        row.appendChild(customInput);
+        container.appendChild(row);
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'card-assistant-toggle';
+        nextBtn.style.marginTop = '8px';
+        nextBtn.textContent = 'Weiter';
+        nextBtn.addEventListener('click', () => {
+          const chosen = select.value === '__custom__' ? customInput.value.trim() : select.value;
+          if (!chosen) return;
+          draft.type = chosen;
+          draft.config = { type: chosen };
+          this._render();
+        });
+        container.appendChild(nextBtn);
+        return container;
+      }
+
+      // Schritt 2: Karte mit dem bestmöglichen verfügbaren Editor konfigurieren.
+      const editorTag = this._pickCardElementEditorTag();
+      const editorWrap = document.createElement('div');
+      editorWrap.className = 'card-assistant-editor';
+
+      if (editorTag === 'hui-card-element-editor') {
+        const el = document.createElement(editorTag);
+        el.hass = this._hass;
+        // Minimaler Lovelace-Kontext, den hui-card-element-editor zum
+        // Funktionieren erwartet - wir bauen keine echte Lovelace-Ansicht,
+        // nur eine leere Hülle, die für die Editor-Anzeige ausreicht.
+        el.lovelace = { config: { views: [] }, editMode: true };
+        el.value = draft.config;
+        el.addEventListener('config-changed', (e) => {
+          e.stopPropagation();
+          if (e.detail && e.detail.config) {
+            draft.config = e.detail.config;
+          }
+        });
+        editorWrap.appendChild(el);
+      } else if (editorTag === 'ha-yaml-editor') {
+        const el = document.createElement(editorTag);
+        el.defaultValue = draft.config;
+        el.addEventListener('value-changed', (e) => {
+          e.stopPropagation();
+          if (e.detail && e.detail.isValid !== false) {
+            draft.config = e.detail.value;
+          }
+        });
+        editorWrap.appendChild(el);
+      } else {
+        // Letzte Stufe: einfaches Textfeld mit JSON, falls beide obigen
+        // Bauteile nicht verfügbar sind.
+        const textarea = document.createElement('textarea');
+        textarea.value = JSON.stringify(draft.config, null, 2);
+        textarea.addEventListener('input', () => {
+          try {
+            draft.config = JSON.parse(textarea.value);
+          } catch (err) {
+            // Ungültiges JSON während des Tippens einfach ignorieren, bis es
+            // wieder gültig ist - nicht bei jedem Zeichen einen Fehler zeigen.
+          }
+        });
+        editorWrap.appendChild(textarea);
+      }
+      container.appendChild(editorWrap);
+
+      const backBtn = document.createElement('button');
+      backBtn.className = 'card-assistant-back';
+      backBtn.textContent = 'Anderen Kartentyp wählen';
+      backBtn.addEventListener('click', () => {
+        draft.type = null;
+        draft.config = null;
+        this._render();
+      });
+      container.appendChild(backBtn);
+
+      const actions = document.createElement('div');
+      actions.className = 'card-assistant-actions';
+
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'card-assistant-apply';
+      applyBtn.textContent = 'Karte übernehmen';
+      applyBtn.addEventListener('click', () => {
+        const cardConfig = draft.config || { type: draft.type };
+        if (!Array.isArray(this._config.tabs[index].cards)) {
+          this._config.tabs[index].cards = [];
+        }
+        this._config.tabs[index].cards.push(cardConfig);
+        this._assistantOpen.delete(index);
+        this._assistantDraft.delete(index);
+        this._emitChange();
+        this._render();
+      });
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'card-assistant-cancel';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.addEventListener('click', () => {
+        this._assistantOpen.delete(index);
+        this._assistantDraft.delete(index);
+        this._render();
+      });
+
+      actions.appendChild(applyBtn);
+      actions.appendChild(cancelBtn);
+      container.appendChild(actions);
+
+      return container;
+    }
+
     _render() {
       if (!this._config) return;
       if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
       if (!this._collapsedTabs) this._collapsedTabs = new Set();
+      if (!this._assistantOpen) this._assistantOpen = new Set();
+      if (!this._assistantDraft) this._assistantDraft = new Map();
       const root = this.shadowRoot;
       root.innerHTML = '';
 
       const style = document.createElement('style');
       style.textContent = `
+        /* ============ Kopfbereich der Einstellungsbox ============ */
+        .global-settings {
+          border: 1px solid var(--divider-color, #ccc);
+          border-radius: 10px;
+          padding: 14px;
+          margin-bottom: 16px;
+          background: var(--card-background-color, #fff);
+        }
+        .editor-header {
+          text-align: center;
+          padding-bottom: 12px;
+          margin-bottom: 14px;
+          border-bottom: 1px solid var(--divider-color, rgba(0,0,0,.1));
+        }
+        .editor-header-main {
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--primary-text-color);
+        }
+        .editor-header-sub {
+          margin-top: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 0.03em;
+          color: var(--secondary-text-color);
+        }
+        .global-settings .hint {
+          font-size: 12px;
+          color: var(--secondary-text-color);
+          margin: 0 0 8px 0;
+        }
+
+        /* ============ Einstellungsgruppen & Eingabefelder-Raster ============ */
+        .settings-group-heading {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--primary-color, #03a9f4);
+          margin: 18px 0 8px 0;
+          padding-top: 12px;
+          border-top: 1px solid var(--divider-color, rgba(0,0,0,.08));
+        }
+        .settings-group-heading ha-icon {
+          --mdc-icon-size: 16px;
+          color: var(--primary-color, #03a9f4);
+        }
+        .settings-group-heading:first-of-type {
+          margin-top: 4px;
+          padding-top: 0;
+          border-top: none;
+        }
+        .settings-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 8px 16px;
+          margin: 12px 0;
+          padding: 12px;
+          background: var(--secondary-background-color, rgba(0,0,0,.03));
+          border-radius: 8px;
+        }
+        .setting-field { display: flex; flex-direction: column; gap: 4px; }
+        .setting-field label { font-size: 12px; color: var(--secondary-text-color); }
+        .setting-field label .info-tooltip { margin-left: 4px; }
+        .setting-field input[type="color"] {
+          width: 100%; height: 36px; border: none; border-radius: 6px; padding: 0; cursor: pointer;
+        }
+        .setting-field input[type="number"] {
+          width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px;
+          border: 1px solid var(--divider-color, #ccc); background: var(--card-background-color, #fff);
+          color: var(--primary-text-color, #000);
+        }
+        .reset-inline-icon {
+          --mdc-icon-size: 15px;
+          margin-left: 4px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          vertical-align: middle;
+          transition: color 150ms ease;
+        }
+        .reset-inline-icon:hover {
+          color: var(--primary-color, #03a9f4);
+        }
+        .color-row { display: flex; align-items: center; gap: 8px; }
+        .color-row input[type="color"] { flex: 1; }
+        .transparent-toggle {
+          display: flex; align-items: center; gap: 4px; font-size: 12px;
+          color: var(--secondary-text-color); white-space: nowrap;
+        }
+        .toggle-row { display: flex; align-items: center; gap: 8px; }
+
+        /* ============ Info-Tooltip (Hilfe-Symbol mit Sprechblase) ============ */
+        .info-tooltip {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          vertical-align: middle;
+          cursor: help;
+        }
+        .info-tooltip ha-icon {
+          --mdc-icon-size: 15px;
+          color: var(--secondary-text-color);
+        }
+        .info-tooltip .info-bubble {
+          position: absolute;
+          bottom: 130%;
+          right: 0;
+          left: auto;
+          transform: translateY(4px);
+          background: rgba(33, 33, 33, 0.95);
+          color: #fff;
+          padding: 6px 10px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 400;
+          line-height: 1.3;
+          white-space: normal;
+          width: max-content;
+          max-width: 200px;
+          box-shadow: 0 2px 6px rgba(0,0,0,.3);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 120ms ease, transform 120ms ease;
+          z-index: 10;
+        }
+        .info-tooltip:hover .info-bubble,
+        .info-tooltip.tsc-tooltip-open .info-bubble {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+        .info-tooltip.align-left .info-bubble {
+          right: auto;
+          left: 0;
+        }
+        .info-tooltip.align-center .info-bubble {
+          right: auto;
+          left: 50%;
+          transform: translateX(-50%) translateY(4px);
+        }
+        .info-tooltip.align-center:hover .info-bubble,
+        .info-tooltip.align-center.tsc-tooltip-open .info-bubble {
+          transform: translateX(-50%) translateY(0);
+        }
+
+        /* ============ Tab-Kachel (Kopfzeile + Inhalt je Tab) ============ */
         .tab-block {
           border: 1px solid var(--divider-color, #ccc);
           border-radius: 8px;
@@ -776,149 +1451,88 @@
         .tab-body { padding: 12px; }
         .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
         .row ha-textfield { flex: 1; }
-        .settings-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 8px 16px;
-          margin: 12px 0;
-          padding: 12px;
-          background: var(--secondary-background-color, rgba(0,0,0,.03));
+        .actions { display: flex; gap: 4px; margin-bottom: 8px; }
+        label.section-label { font-size: 12px; color: var(--secondary-text-color); display:block; margin-bottom:4px; }
+        ha-yaml-editor { display: block; margin-top: 4px; }
+
+        /* ============ Karten-Assistent (native-Editor-Fallback) ============ */
+        .card-assistant {
+          margin-top: 10px;
+          border: 1px dashed var(--divider-color, #ccc);
           border-radius: 8px;
+          padding: 10px;
         }
-        .global-settings {
-          border: 1px solid var(--divider-color, #ccc);
-          border-radius: 10px;
-          padding: 14px;
-          margin-bottom: 16px;
-          background: var(--card-background-color, #fff);
-        }
-        .editor-header {
-          text-align: center;
-          padding-bottom: 12px;
-          margin-bottom: 14px;
-          border-bottom: 1px solid var(--divider-color, rgba(0,0,0,.1));
-        }
-        .editor-header-main {
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--primary-text-color);
-        }
-        .editor-header-sub {
-          margin-top: 4px;
-          font-size: 12px;
-          font-weight: 500;
-          letter-spacing: 0.03em;
-          color: var(--secondary-text-color);
-        }
-        .global-settings .hint {
-          font-size: 12px;
-          color: var(--secondary-text-color);
-          margin: 0 0 8px 0;
-        }
-        .settings-group-heading {
+        .card-assistant-toggle {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 12px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+          background: transparent;
+          border: none;
           color: var(--primary-color, #03a9f4);
-          margin: 18px 0 8px 0;
-          padding-top: 12px;
-          border-top: 1px solid var(--divider-color, rgba(0,0,0,.08));
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 4px 0;
         }
-        .settings-group-heading ha-icon {
-          --mdc-icon-size: 16px;
-          color: var(--primary-color, #03a9f4);
-        }
-        .settings-group-heading:first-of-type {
-          margin-top: 4px;
-          padding-top: 0;
-          border-top: none;
-        }
-        .setting-field { display: flex; flex-direction: column; gap: 4px; }
-        .setting-field label { font-size: 12px; color: var(--secondary-text-color); }
-        .setting-field label .info-tooltip { margin-left: 4px; }
-        .info-tooltip {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          vertical-align: middle;
-          cursor: help;
-        }
-        .info-tooltip ha-icon {
-          --mdc-icon-size: 15px;
-          color: var(--secondary-text-color);
-        }
-        .info-tooltip .info-bubble {
-          position: absolute;
-          bottom: 130%;
-          right: 0;
-          left: auto;
-          transform: translateY(4px);
-          background: rgba(33, 33, 33, 0.95);
-          color: #fff;
-          padding: 6px 10px;
+        .card-assistant-toggle ha-icon { --mdc-icon-size: 18px; }
+        .card-assistant-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+        .card-assistant-row select,
+        .card-assistant-row input[type="text"],
+        .card-assistant-row input[type="number"],
+        .card-assistant-row input[type="time"] {
+          flex: 1;
+          min-width: 140px;
+          padding: 8px;
           border-radius: 6px;
-          font-size: 12px;
-          font-weight: 400;
-          line-height: 1.3;
-          white-space: normal;
-          width: max-content;
-          max-width: 200px;
-          box-shadow: 0 2px 6px rgba(0,0,0,.3);
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity 120ms ease, transform 120ms ease;
-          z-index: 10;
-        }
-        .info-tooltip:hover .info-bubble,
-        .info-tooltip.tsc-tooltip-open .info-bubble {
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
-        }
-        .info-tooltip.align-left .info-bubble {
-          right: auto;
-          left: 0;
-        }
-        .info-tooltip.align-center .info-bubble {
-          right: auto;
-          left: 50%;
-          transform: translateX(-50%) translateY(4px);
-        }
-        .info-tooltip.align-center:hover .info-bubble,
-        .info-tooltip.align-center.tsc-tooltip-open .info-bubble {
-          transform: translateX(-50%) translateY(0);
-        }
-        .setting-field input[type="color"] {
-          width: 100%; height: 36px; border: none; border-radius: 6px; padding: 0; cursor: pointer;
-        }
-        .setting-field input[type="number"] {
-          width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px;
-          border: 1px solid var(--divider-color, #ccc); background: var(--card-background-color, #fff);
+          border: 1px solid var(--divider-color, #ccc);
+          background: var(--card-background-color, #fff);
           color: var(--primary-text-color, #000);
         }
-        .reset-inline-icon {
-          --mdc-icon-size: 15px;
-          margin-left: 4px;
-          color: var(--secondary-text-color);
+        .card-assistant-editor { margin-top: 10px; }
+        .card-assistant-editor textarea {
+          width: 100%;
+          box-sizing: border-box;
+          min-height: 120px;
+          font-family: monospace;
+          font-size: 12px;
+          padding: 8px;
+          border-radius: 6px;
+          border: 1px solid var(--divider-color, #ccc);
+          background: var(--card-background-color, #fff);
+          color: var(--primary-text-color, #000);
+        }
+        .card-assistant-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .card-assistant-actions button {
+          padding: 8px 14px;
+          border-radius: 6px;
+          border: none;
           cursor: pointer;
-          vertical-align: middle;
-          transition: color 150ms ease;
+          font-size: 13px;
+          font-weight: 600;
         }
-        .reset-inline-icon:hover {
-          color: var(--primary-color, #03a9f4);
+        .card-assistant-apply {
+          background: var(--primary-color, #03a9f4);
+          color: var(--text-primary-color, #fff);
         }
-        .color-row { display: flex; align-items: center; gap: 8px; }
-        .color-row input[type="color"] { flex: 1; }
-        .transparent-toggle {
-          display: flex; align-items: center; gap: 4px; font-size: 12px;
-          color: var(--secondary-text-color); white-space: nowrap;
+        .card-assistant-cancel {
+          background: transparent;
+          color: var(--secondary-text-color);
         }
-        .toggle-row { display: flex; align-items: center; gap: 8px; }
-        .actions { display: flex; gap: 4px; margin-bottom: 8px; }
+        .card-assistant-back {
+          background: transparent;
+          color: var(--secondary-text-color);
+          text-decoration: underline;
+          font-size: 12px;
+          margin-top: 6px;
+          cursor: pointer;
+          border: none;
+        }
+
+        /* ============ Sichtbarkeitsbedingung (innerhalb eines Tabs) ============ */
+        .visibility-fields { grid-column: 1 / -1; }
+        .visibility-label { min-width: 110px; }
+
+        /* ============ Aktionen / "Tab hinzufügen"-Knopf ============ */
         .add-tab-button {
           display: flex;
           align-items: center;
@@ -945,8 +1559,6 @@
           transform: scale(0.98);
           box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
-        label.section-label { font-size: 12px; color: var(--secondary-text-color); display:block; margin-bottom:4px; }
-        ha-yaml-editor { display: block; margin-top: 4px; }
       `;
       root.appendChild(style);
 
@@ -1236,6 +1848,36 @@
       indicatorGrid.appendChild(globalIndicatorField);
       globalBox.appendChild(indicatorGrid);
 
+      // --- Gruppe 4: Verhalten ---
+      globalBox.appendChild(makeGroupHeading('Verhalten', 'mdi:tune-variant'));
+      const behaviorGrid = document.createElement('div');
+      behaviorGrid.className = 'settings-grid';
+
+      const rememberField = document.createElement('div');
+      rememberField.className = 'setting-field';
+      const rememberLabel = document.createElement('label');
+      rememberLabel.textContent = 'Zuletzt gewählten Tab merken';
+      rememberLabel.appendChild(
+        this._createInfoTooltip(
+          'Öffnet das Dashboard künftig direkt beim zuletzt ausgewählten Tab, statt immer beim ersten. Wird lokal im Browser gespeichert.',
+          'center'
+        )
+      );
+      const rememberToggleRow = document.createElement('div');
+      rememberToggleRow.className = 'toggle-row';
+      const rememberToggle = document.createElement('ha-switch');
+      rememberToggle.checked = this._config.remember_tab === true;
+      rememberToggle.addEventListener('change', (e) => {
+        this._config.remember_tab = e.target.checked;
+        this._emitChange();
+      });
+      rememberToggleRow.appendChild(rememberToggle);
+      rememberField.appendChild(rememberLabel);
+      rememberField.appendChild(rememberToggleRow);
+
+      behaviorGrid.appendChild(rememberField);
+      globalBox.appendChild(behaviorGrid);
+
       wrap.appendChild(globalBox);
 
       this._config.tabs.forEach((tab, index) => {
@@ -1355,6 +1997,8 @@
           settingsGrid.appendChild(enabledField);
           body.appendChild(settingsGrid);
 
+          body.appendChild(this._buildVisibilitySection(index, tab));
+
           const cardsLabel = document.createElement('label');
           cardsLabel.className = 'section-label';
           cardsLabel.textContent = 'Karten dieses Tabs (YAML-Liste)';
@@ -1369,6 +2013,8 @@
             }
           });
           body.appendChild(yamlEditor);
+
+          body.appendChild(this._buildCardAssistant(index));
 
           block.appendChild(body);
         }
@@ -1423,6 +2069,7 @@
     type: CARD_TAG,
     name: 'Tabbed Stack Card',
     description:
-      'Scrollbare Karte mit festen, konfigurierbaren Tabs im Kopfbereich – für frei platzierbare Unterkarten pro Tab.',
+      'Organize any Lovelace cards into responsive, paginated tabs with swipe navigation and a full visual editor.',
+    documentationURL: 'https://github.com/Swiftrail84/Tabbed-Stack-Card',
   });
 })();
