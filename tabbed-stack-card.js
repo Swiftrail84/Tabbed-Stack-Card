@@ -1,5 +1,5 @@
 // Tabbed Stack Card für Home Assistant
-// v0.3
+// v1.0.0
 (() => {
   const CARD_TAG = 'tabbed-stack-card';
   const EDITOR_TAG = 'tabbed-stack-card-editor';
